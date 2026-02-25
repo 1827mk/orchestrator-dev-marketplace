@@ -67,6 +67,13 @@ mcp__filesystem__read_multiple_files     ← batch read for context
 mcp__doc-forge__text_encoding_converter  ← only if encoding conversion explicitly required in plan
 ```
 
+### 3b. Library Docs (when implementing against external library)
+```
+mcp__context7__resolve-library-id   ← find library ID (e.g. "react", "fastapi")
+mcp__context7__get-library-docs     ← get up-to-date API docs for that version
+```
+Fallback if context7 unavailable: mcp__web_reader__webReader
+
 ### 4. Run and test
 ```
 Bash                           ← test runner (npm test / pytest / go test / cargo test / mvn test)

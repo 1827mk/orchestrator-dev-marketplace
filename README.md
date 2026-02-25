@@ -144,4 +144,3 @@ cat .claude/team/dev-blocked.md     # Dev blocked reason (if any)
 - `jq` installed: `brew install jq`
 - MCP servers: serena, memory, ide, doc-forge, web_reader, fetch, sequentialthinking
 - Skills: superpowers, pr-review-toolkit, commit-commands, feature-dev, code-simplifier
-# orchestrator-dev-marketplace

@@ -28,9 +28,15 @@ mcp__memory__open_nodes          ← open specific known entities if relevant
 | Excel / XLSX | `mcp__doc-forge__excel_read` |
 | URL (full page) | `mcp__web_reader__webReader` |
 | URL (specific content) | `mcp__fetch__fetch` |
+| Library/framework docs | `mcp__context7__resolve-library-id` → `mcp__context7__get-library-docs` |
 | Multiple files at once | `mcp__filesystem__read_multiple_files` |
 | Single text file | `mcp__filesystem__read_text_file` |
 | Image (remote URL) | `mcp__4_5v_mcp__analyze_image` |
+
+### 2b. MCP Fallback (if unavailable)
+- context7 unavailable → mcp__web_reader__webReader for library docs
+- doc-forge unavailable → mcp__filesystem__read_text_file for text files only
+- serena unavailable → mcp__filesystem__directory_tree + read_multiple_files
 
 ### 3. Detect project context
 ```

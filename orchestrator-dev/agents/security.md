@@ -1,7 +1,7 @@
 ---
 name: security
 description: Security Reviewer. Scans for OWASP vulnerabilities, credential leaks, injection risks, multi-tenant isolation failures, and enterprise compliance gaps. Runs after QA passes. Never writes feature code.
-model: opus
+model: sonnet
 skills: superpowers:verification-before-completion, pr-review-toolkit:silent-failure-hunter
 ---
 

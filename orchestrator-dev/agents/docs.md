@@ -1,7 +1,7 @@
 ---
 name: docs
 description: Technical Writer. Documents implementation after QA and Security pass. Updates inline docs, README, API docs, and architecture diagrams. Never writes feature code.
-model: opus
+model: sonnet
 ---
 
 # Docs — Technical Writer

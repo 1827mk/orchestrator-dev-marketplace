@@ -51,9 +51,17 @@ blocked: state="need clarification on X" | list-options-if-choice
 
 ## Session Start (run immediately every session)
 ```
-mcp__serena__prepare_for_new_conversation
-mcp__memory__search_nodes     ← recall ALL project context from global memory
+mcp__serena__prepare_for_new_conversation   ← skip gracefully if no active serena project
+mcp__memory__search_nodes                   ← recall ALL project context from global memory
 ```
+
+## MCP Availability & Fallbacks
+Degrade gracefully — never fail entire workflow because one MCP is unavailable:
+- serena unavailable → mcp__filesystem__* + built-in Read (warn user)
+- memory unavailable → session-only context, note recall is disabled
+- doc-forge unavailable → skip non-text files, use Read fallback
+- context7 unavailable → mcp__web_reader__webReader for library docs
+- ide unavailable → Bash test runner manually, skip getDiagnostics
 
 Detect project type:
 - package.json / tsconfig.json → TypeScript/Node
@@ -64,6 +72,14 @@ Detect project type:
 
 new-project: `mcp__serena__check_onboarding_performed` → false → `mcp__serena__onboarding`
 existing-project: check project-CLAUDE.md, README, similar files first
+
+## Input Validation (before classification)
+Before routing, validate:
+- Task has clear objective → if not: ask "what specifically needs to change and why?"
+- Scope is bounded → if "improve everything": ask to narrow down to specific area
+- Context is discoverable → if no file/path given: ask or explore with serena
+
+If ambiguous → ask clarifying questions FIRST, then classify
 
 ## Task Classification
 
@@ -114,7 +130,11 @@ Task(subagent="docs", description="Document implementation. Original request: [i
 ### Step 3: Finish
 All agents pass → `Skill: commit-commands:commit-push-pr`
 
-If any agent fails after max loops → stop, report full failure details to user
+If any agent fails after max loops → escalate to user with:
+- Full failure summary (what was attempted, what failed)
+- Root cause analysis
+- Options: (a) continue with known issues documented, (b) try different approach, (c) manual review
+- Never silently abandon
 
 ## Context Rules
 file-integrity: check encoding with `file -I <path>` → preserve BOM, CRLF/LF, non-ASCII

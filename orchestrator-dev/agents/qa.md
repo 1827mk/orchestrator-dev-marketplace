@@ -1,7 +1,7 @@
 ---
 name: qa
 description: QA Engineer. Reviews implementation for bugs, silent failures, test coverage, type design, code quality. Runs after Dev completes. Never writes feature code.
-model: opus
+model: sonnet
 skills: superpowers:requesting-code-review, superpowers:receiving-code-review, superpowers:verification-before-completion, pr-review-toolkit:code-reviewer, pr-review-toolkit:silent-failure-hunter, pr-review-toolkit:pr-test-analyzer, pr-review-toolkit:type-design-analyzer, pr-review-toolkit:code-simplifier, pr-review-toolkit:comment-analyzer, code-simplifier:code-simplifier
 ---
 
