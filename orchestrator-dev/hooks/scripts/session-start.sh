@@ -1,65 +1,78 @@
 #!/bin/bash
-# SessionStart Hook — injects orchestrator-dev team context every session
+# SessionStart Hook — orchestrator-dev v3.0
 
-# Dependency check
 if ! command -v jq >/dev/null 2>&1; then
-  echo '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"⚠️ jq not found. Install with: brew install jq — SessionStart hook skipped."}}' 
+  echo '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"⚠️ jq not found. Install: brew install jq"}}'
   exit 0
 fi
 
+[ -n "$CLAUDE_PROJECT_DIR" ] && mkdir -p "$CLAUDE_PROJECT_DIR/.claude/team" 2>/dev/null || true
+
+# Check for interrupted session
+INTERRUPTED=""
+STATE_FILE=""
 if [ -n "$CLAUDE_PROJECT_DIR" ]; then
-  mkdir -p "$CLAUDE_PROJECT_DIR/.claude/team" 2>/dev/null || true
+  STATE_FILE="$CLAUDE_PROJECT_DIR/.claude/team/state.md"
+  if [ -f "$STATE_FILE" ]; then
+    STATUS=$(grep "^status:" "$STATE_FILE" 2>/dev/null | awk '{print $2}')
+    if [ "$STATUS" != "COMPLETE" ] && [ -n "$STATUS" ]; then
+      PIPELINE=$(grep "^pipeline:" "$STATE_FILE" | awk '{print $2}')
+      STEP=$(grep "^step:" "$STATE_FILE" | awk '{print $2}')
+      SUBSTEP=$(grep "^substep:" "$STATE_FILE" | sed 's/^substep: //')
+      FILES=$(grep "^files_modified:" "$STATE_FILE" | sed 's/^files_modified: //')
+      QA=$(grep "^qa_result:" "$STATE_FILE" | awk '{print $2}')
+      SEC=$(grep "^security_result:" "$STATE_FILE" | awk '{print $2}')
+      QA_ATT=$(grep "^qa_attempts:" "$STATE_FILE" | awk '{print $2}')
+      SEC_ATT=$(grep "^security_attempts:" "$STATE_FILE" | awk '{print $2}')
+      INTERRUPTED="⚠️  INTERRUPTED SESSION DETECTED
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  📋 Pipeline:      $PIPELINE
+  📍 Interrupted:   $STEP — $SUBSTEP
+  📊 Status:        $STATUS
+  📁 Files:         $FILES
+  ✅ QA Result:     $QA (attempt $QA_ATT/3)
+  🔒 SEC Result:    $SEC (attempt $SEC_ATT/2)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Options:
+    • yes         → Resume from interrupted step
+    • start fresh → Reset state.md + clear snapshots
+    • show        → Read full state + reports
+    • rollback    → Restore all snapshots first
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    fi
+  fi
 fi
 
-CONTEXT=$(cat <<'CONTEXT'
-## orchestrator-dev v2.0 Active
+CONTEXT=$(cat <<EOF
+## orchestrator-dev v4.0 Active — ORCHESTRATOR-FIRST
 
-### CRITICAL: Team Routing
-ALWAYS delegate coding tasks to orchestrator:
-  Task(subagent="orchestrator", description="[user request]")
+${INTERRUPTED}
 
-Do NOT implement directly. Applies to:
-  code-review | bug-fix | new-feature | refactor | security-scan | documentation | reading/analyzing code
+### 🎯 ORCHESTRATOR-FIRST PATTERN
+ALL requests → Orchestrator analyzes intent → routes to pipeline
+You do NOT respond directly to codebase tasks. Delegate to orchestrator.
 
-Exception: trivial (<20 lines, obvious fix, no design decision) → implement directly
+### TOOL PRIORITY (enforced)
+mcp_server > skills > built-in
+
+### Smart Classification
+TRIVIAL    → <20 lines, obvious → Fast mode (skip QA/SEC)
+STANDARD   → bug fix, refactor → SA → Dev → QA ∥ Security
+FULL_SDLC  → new feature → PM →[✋]→ SA →[✋]→ Dev → QA ∥ Security → Docs
+EXPLORE    → analyze, explain → SA only
+REVIEW     → code review → QA + Security only
+SECURITY   → security scan → Security only
+DOCS       → documentation → Docs only
 
 ### Session Init (run now)
-1. mcp__serena__prepare_for_new_conversation  (skip gracefully if no active serena project)
-2. mcp__memory__search_nodes                  ← global memory (NOT serena memory)
+1. mcp__serena__prepare_for_new_conversation (skip gracefully if no project)
+2. mcp__memory__search_nodes ← recall ALL project context
+3. If interrupted session → ask user: Resume?
 
-### MCP Availability & Fallbacks
-- serena unavailable → use mcp__filesystem__* + built-in Read (warn user)
-- memory unavailable → session-only context, no cross-session recall
-- doc-forge unavailable → skip non-text file processing, use Read fallback
-- context7 unavailable → skip library docs lookup, use web_reader instead
-- ide unavailable → skip getDiagnostics, run Bash test runner manually
-
-### Memory Rules (global = mcp__memory__* only)
-  mcp__memory__search_nodes       ← ALWAYS before any task
-  mcp__memory__create_entities    ← ask user before saving
-  mcp__memory__add_observations   ← ask user before saving
-NEVER use mcp__serena__write_memory for cross-session knowledge
-
-### Tool Priority: MCP > Built-in (hooks enforce)
-  Never Grep  → mcp__serena__search_for_pattern / find_symbol
-  Never Glob  → mcp__serena__find_file
-  Never Edit symbol → mcp__serena__replace_symbol_body / rename_symbol
-  Never WebSearch for URL → mcp__web_reader__webReader / mcp__fetch__fetch
-  Library docs → mcp__context7__resolve-library-id then mcp__context7__get-library-docs
-
-### Verification (every edit — mandatory)
-  mcp__ide__getDiagnostics → must = 0
-  serena-think: think_about_task_adherence → think_about_collected_information → think_about_whether_you_are_done
-
-### Enterprise Constraints
-  security: validate-input-at-boundary | no-secrets-in-logs | owasp-aware
-  multi-tenant: tenant_id every query | no-cross-tenant-leak=critical
-  data: soft-delete-over-hard | no-select-star | pagination-required
-  db: SELECT only via mcp__dbhub__execute_sql | max 1000 rows | never INSERT/UPDATE/DELETE/DROP
-
-### Team Reports
-  .claude/team/plan.md | qa-report.md | security-report.md | dev-blocked.md
-CONTEXT
+### Progress Indicator
+Show progress bar at start and after each step:
+[✅] PM  [✅] SA  [🔄] DEV  [⏳] QA  [⏳] SEC
+EOF
 )
 
 OUTPUT=$(jq -n --arg ctx "$CONTEXT" \
