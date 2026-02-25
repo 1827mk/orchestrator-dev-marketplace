@@ -82,9 +82,13 @@ If state.md exists AND status != "COMPLETE":
 ```
 
 ## State File (.claude/team/state.md)
-Orchestrator writes before AND after EVERY step. Dev updates substep + files_modified per edit.
+
+Orchestrator writes before AND after EVERY step.
+Dev updates substep + files_modified per edit.
+
 ```markdown
 # Pipeline State
+task: "[concise task description]"
 pipeline: TRIVIAL|STANDARD|FULL_SDLC|EXPLORE|REVIEW|SECURITY|DOCS
 step: PM|SA|DEV|QA_SECURITY|DOCS|COMPLETE
 substep: "3/7 — replacing getUserById in user.service.ts"
@@ -92,13 +96,19 @@ status: RUNNING|WAITING_CONFIRM|QA_FAIL|SECURITY_FAIL|BLOCKED|COMPLETE
 files_modified: src/api/user.ts, src/service/user.ts
 snapshots_dir: .claude/team/snapshots/
 diagnostics_last: PASS|FAIL|unknown
-qa_result: pending|PASS|FAIL
-security_result: pending|PASS|FAIL
+qa_result: pending|PASS|SKIP
+security_result: pending|PASS|SKIP
 qa_attempts: 0
 security_attempts: 0
-dod_check: pending|PASS|FAIL
+dod_check: pending|PASS|BASIC|FULL
 last_updated: 2024-01-15T10:30:00
 ```
+
+### Changes from v3:
+- Added `task` field for progress display
+- `qa_result`/`security_result` can be SKIP for TRIVIAL
+- `dod_check` can be BASIC (TRIVIAL) or FULL (STANDARD+)
+
 On COMPLETE → keep as audit trail. Never delete.
 
 ## Memory Schema (structured — consistent cross-session)
