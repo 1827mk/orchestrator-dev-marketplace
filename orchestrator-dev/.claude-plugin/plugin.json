@@ -4,6 +4,5 @@
   "description": "Full AI development team: SA → Dev → QA → Security → Docs. Enterprise workflow from CLAUDE.md v29. MCP tool enforcement via hooks.",
   "author": {
     "name": "tanaphat"
-  },
-  "hooks": "./hooks/hooks.json"
+  }
 }

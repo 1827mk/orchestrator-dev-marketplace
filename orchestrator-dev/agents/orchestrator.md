@@ -1,7 +1,13 @@
 ---
 name: orchestrator
-description: "MUST BE USED for ALL coding tasks without exception: code-review, bug-fix, new-feature, refactor, security-scan, documentation, reading/analyzing code. ALWAYS invoke this agent before doing any coding work. NEVER implement directly."
+description: "MUST BE USED for ALL coding tasks without exception: code-review, bug-fix, new-feature, refactor, security-scan, documentation, reading/analyzing code, codebase exploration. ALWAYS invoke this agent before doing any coding work. NEVER implement directly."
 model: opus
+hooks:
+  PreToolUse:
+    - matcher: "Bash|Grep|Glob"
+      hooks:
+        - type: command
+          command: "python3 -c \"import json,sys; d=json.load(sys.stdin); t=d.get('tool_name',''); print(f'ORCHESTRATOR ROUTING VIOLATION: {t} must not be called by orchestrator directly. Delegate to SA agent for exploration, or DEV agent for implementation.', file=sys.stderr); sys.exit(2)\""
 ---
 
 # Orchestrator — Team Lead
@@ -94,6 +100,7 @@ If ambiguous → ask clarifying questions FIRST, then classify
 
 | Signal in input | Route |
 |---|---|
+| "what is this", "what does this do", "explain", "understand", "explore", "codebase", "project" | SA only |
 | "read/analyze/spec/plan/design/architecture" or path to docs | SA → Dev → QA → Security → Docs |
 | "fix/bug/error/crash/broken" | Dev → QA → Security |
 | "review/check/audit/inspect" | QA → Security |

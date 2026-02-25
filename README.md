@@ -4,24 +4,32 @@ Full AI development team plugin for Claude Code. Converts CLAUDE.md v29 enterpri
 
 ## Team
 
-| Agent | Role |
-|---|---|
-| orchestrator | Team lead, classifies and routes all tasks |
-| sa | Solution Architect, analyzes codebase and writes plan |
-| dev | Developer, implements code per plan |
-| qa | QA Engineer, reviews quality and test coverage |
-| security | Security Reviewer, scans for vulnerabilities |
-| docs | Technical Writer, updates docs and diagrams |
+| Agent | Role | Model |
+|---|---|---|
+| orchestrator | Team lead, classifies and routes all tasks | opus |
+| sa | Solution Architect, analyzes codebase and writes plan | opus |
+| dev | Developer, implements code per plan | opus |
+| qa | QA Engineer, reviews quality and test coverage | sonnet |
+| security | Security Reviewer, scans for vulnerabilities | sonnet |
+| docs | Technical Writer, updates docs and diagrams | sonnet |
 
 ## Flow
 
 ```
 user task → orchestrator → SA → Dev → QA → Security → Docs → commit-push-pr
-                                  ↑____________↓ (fail, max 3x)
-                                  ↑_________________↓ (fail, max 2x)
+                                  ↑____________↓ (QA fail, max 3x)
+                                  ↑_________________↓ (Security fail, max 2x)
 ```
 
-## Tool Enforcement (hooks)
+## Hooks
+
+| Hook | File | ทำอะไร |
+|---|---|---|
+| SessionStart | session-start.sh | inject team context ต้น session |
+| UserPromptSubmit | prompt-guard.py | inject routing reminder ทุก prompt |
+| PreToolUse | tool-guard.py | block Grep/Glob, warn Edit/Write/Read/WebSearch |
+
+## Tool Enforcement
 
 | Built-in | Status | Use instead |
 |---|---|---|
@@ -29,7 +37,7 @@ user task → orchestrator → SA → Dev → QA → Security → Docs → commi
 | Glob | 🚫 blocked | `mcp__serena__find_file` |
 | Edit (symbol) | ⚠️ warned | `mcp__serena__replace_symbol_body` / `rename_symbol` |
 | Write | ⚠️ warned | `mcp__serena__create_text_file` |
-| WebSearch | ⚠️ warned | `mcp__web_reader__webReader` / `mcp__fetch__fetch` |
+| WebSearch | ⚠️ warned | `mcp__web_reader__webReader` / `mcp__fetch__fetch` / `mcp__context7__get-library-docs` |
 | Read | ⚠️ warned | `mcp__serena__get_symbols_overview` / `read_file` |
 
 ---
@@ -54,21 +62,23 @@ mkdir -p orchestrator-dev-marketplace/orchestrator-dev/agents
 mkdir -p orchestrator-dev-marketplace/orchestrator-dev/hooks/scripts
 
 # ย้ายไฟล์ไปที่ถูกต้อง
-mv orchestrator-dev-marketplace/marketplace.json orchestrator-dev-marketplace/.claude-plugin/
-mv orchestrator-dev-marketplace/plugin.json      orchestrator-dev-marketplace/orchestrator-dev/.claude-plugin/
-mv orchestrator-dev-marketplace/orchestrator.md  orchestrator-dev-marketplace/orchestrator-dev/agents/
-mv orchestrator-dev-marketplace/sa.md            orchestrator-dev-marketplace/orchestrator-dev/agents/
-mv orchestrator-dev-marketplace/dev.md           orchestrator-dev-marketplace/orchestrator-dev/agents/
-mv orchestrator-dev-marketplace/qa.md            orchestrator-dev-marketplace/orchestrator-dev/agents/
-mv orchestrator-dev-marketplace/security.md      orchestrator-dev-marketplace/orchestrator-dev/agents/
-mv orchestrator-dev-marketplace/docs.md          orchestrator-dev-marketplace/orchestrator-dev/agents/
-mv orchestrator-dev-marketplace/hooks.json       orchestrator-dev-marketplace/orchestrator-dev/hooks/
-mv orchestrator-dev-marketplace/tool-guard.py    orchestrator-dev-marketplace/orchestrator-dev/hooks/scripts/
-mv orchestrator-dev-marketplace/session-start.sh orchestrator-dev-marketplace/orchestrator-dev/hooks/scripts/
-mv orchestrator-dev-marketplace/README.md        orchestrator-dev-marketplace/
+mv orchestrator-dev-marketplace/marketplace.json  orchestrator-dev-marketplace/.claude-plugin/
+mv orchestrator-dev-marketplace/plugin.json       orchestrator-dev-marketplace/orchestrator-dev/.claude-plugin/
+mv orchestrator-dev-marketplace/orchestrator.md   orchestrator-dev-marketplace/orchestrator-dev/agents/
+mv orchestrator-dev-marketplace/sa.md             orchestrator-dev-marketplace/orchestrator-dev/agents/
+mv orchestrator-dev-marketplace/dev.md            orchestrator-dev-marketplace/orchestrator-dev/agents/
+mv orchestrator-dev-marketplace/qa.md             orchestrator-dev-marketplace/orchestrator-dev/agents/
+mv orchestrator-dev-marketplace/security.md       orchestrator-dev-marketplace/orchestrator-dev/agents/
+mv orchestrator-dev-marketplace/docs.md           orchestrator-dev-marketplace/orchestrator-dev/agents/
+mv orchestrator-dev-marketplace/hooks.json        orchestrator-dev-marketplace/orchestrator-dev/hooks/
+mv orchestrator-dev-marketplace/tool-guard.py     orchestrator-dev-marketplace/orchestrator-dev/hooks/scripts/
+mv orchestrator-dev-marketplace/prompt-guard.py   orchestrator-dev-marketplace/orchestrator-dev/hooks/scripts/
+mv orchestrator-dev-marketplace/session-start.sh  orchestrator-dev-marketplace/orchestrator-dev/hooks/scripts/
+mv orchestrator-dev-marketplace/README.md         orchestrator-dev-marketplace/
 
 # Set permissions
 chmod +x orchestrator-dev-marketplace/orchestrator-dev/hooks/scripts/tool-guard.py
+chmod +x orchestrator-dev-marketplace/orchestrator-dev/hooks/scripts/prompt-guard.py
 chmod +x orchestrator-dev-marketplace/orchestrator-dev/hooks/scripts/session-start.sh
 
 # Verify structure
@@ -87,6 +97,7 @@ orchestrator-dev-marketplace/orchestrator-dev/agents/qa.md
 orchestrator-dev-marketplace/orchestrator-dev/agents/sa.md
 orchestrator-dev-marketplace/orchestrator-dev/agents/security.md
 orchestrator-dev-marketplace/orchestrator-dev/hooks/hooks.json
+orchestrator-dev-marketplace/orchestrator-dev/hooks/scripts/prompt-guard.py
 orchestrator-dev-marketplace/orchestrator-dev/hooks/scripts/session-start.sh
 orchestrator-dev-marketplace/orchestrator-dev/hooks/scripts/tool-guard.py
 ```
@@ -108,13 +119,13 @@ orchestrator-dev-marketplace/orchestrator-dev/hooks/scripts/tool-guard.py
 
 ### Step 5: Restart Claude Code
 
-Restart เพื่อให้ hooks และ session-start ทำงาน
+Restart เพื่อให้ hooks ทำงาน
 
 ---
 
 ## Usage
 
-```
+```bash
 # Auto-route — พิมพ์ task ตรงๆ
 review โค้ดใน src/api/auth.ts
 fix bug ที่ payment service crash ตอน timeout
@@ -123,24 +134,37 @@ fix bug ที่ payment service crash ตอน timeout
 # Explicit
 Use the orchestrator agent to [task]
 
-# Direct agent
+# Direct agent (ข้าม orchestrator)
 Use the sa agent to analyze /path/to/docs
 Use the dev agent to implement .claude/team/plan.md
 Use the qa agent to review latest changes
+Use the security agent to scan for vulnerabilities
+Use the docs agent to update documentation
 ```
 
 ## Reports
 
 ```bash
-cat .claude/team/plan.md            # SA implementation plan
-cat .claude/team/qa-report.md       # QA findings
-cat .claude/team/security-report.md # Security findings
-cat .claude/team/dev-blocked.md     # Dev blocked reason (if any)
+cat .claude/team/plan.md             # SA implementation plan
+cat .claude/team/qa-report.md        # QA findings
+cat .claude/team/security-report.md  # Security findings
+cat .claude/team/dev-blocked.md      # Dev blocked reason (if any)
+```
+
+## Debug
+
+```bash
+# ดู tool-guard log
+tail -f ~/.claude/tool-guard.log
+
+# ทดสอบ hooks ตรงๆ
+echo '{}' | python3 ~/.claude/orchestrator-dev-marketplace/orchestrator-dev/hooks/scripts/prompt-guard.py
+bash ~/.claude/orchestrator-dev-marketplace/orchestrator-dev/hooks/scripts/session-start.sh
 ```
 
 ## Requirements
 
 - Claude Code with plugin support
 - `jq` installed: `brew install jq`
-- MCP servers: serena, memory, ide, doc-forge, web_reader, fetch, sequentialthinking
+- MCP servers: serena, memory, ide, doc-forge, web_reader, fetch, sequentialthinking, context7
 - Skills: superpowers, pr-review-toolkit, commit-commands, feature-dev, code-simplifier
