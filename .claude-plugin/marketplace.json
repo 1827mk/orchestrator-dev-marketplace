@@ -8,8 +8,8 @@
     {
       "name": "orchestrator-dev",
       "source": "./orchestrator-dev",
-      "description": "Full AI development team: SA → Dev → QA → Security → Docs with enterprise workflow and MCP tool enforcement",
-      "version": "2.0.0",
+      "description": "Enterprise AI dev team v3.0: PM → SA → Dev → QA ∥ Security → Docs. Adaptive pipelines, parallel execution, real-time progress, full MCP tool utilization.",
+      "version": "3.0.0",
       "author": {
         "name": "tanaphat"
       }

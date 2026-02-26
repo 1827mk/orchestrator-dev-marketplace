@@ -1,7 +1,7 @@
 {
   "name": "orchestrator-dev",
-  "version": "2.0.0",
-  "description": "Full AI development team: SA → Dev → QA → Security → Docs. Enterprise workflow from CLAUDE.md v29. MCP tool enforcement via hooks.",
+  "version": "3.1.0",
+  "description": "Enterprise AI dev team: PM → SA → Dev → QA ∥ Security → Docs. Adaptive pipelines, snapshot/rollback, parallel fix loops, shared DoD, structured memory, self-improvement.",
   "author": {
     "name": "tanaphat"
   }

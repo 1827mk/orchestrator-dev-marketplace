@@ -1,72 +1,70 @@
 #!/usr/bin/env python3
 """
-Tool Guard — PreToolUse Hook
+PreToolUse Hook — tool-guard.py v3.0
+Priority: mcp_server > skills > built-in
 Hard blocks: Grep, Glob
 Soft warns: Edit, Write, WebSearch, Read
 """
-import json
-import sys
-import os
-import datetime
+import json, sys, os, datetime
 
 LOG_FILE = os.path.join(os.path.expanduser("~"), ".claude", "tool-guard.log")
 
-def log(tool_name, action, reason):
+def log(tool, action, reason):
     try:
         ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         with open(LOG_FILE, "a") as f:
-            f.write(f"{ts} [{action}] tool={tool_name} reason={reason}\n")
+            f.write(f"{ts} [{action}] tool={tool} reason={reason}\n")
     except Exception:
-        pass  # logging must never break the hook
+        pass
 
 BLOCK = {
     "Grep": (
-        "BLOCKED: Use MCP tools instead of Grep:\n"
-        "  • mcp__serena__search_for_pattern  — regex/string search across codebase\n"
-        "  • mcp__serena__find_symbol          — find class/function/method by name\n"
-        "  • mcp__filesystem__search_files     — glob pattern file search"
+        "BLOCKED — mcp_server > built-in\n"
+        "  search pattern/string  → mcp__serena__search_for_pattern\n"
+        "  find class/function    → mcp__serena__find_symbol\n"
+        "  find file              → mcp__serena__find_file"
     ),
     "Glob": (
-        "BLOCKED: Use MCP tools instead of Glob:\n"
-        "  • mcp__serena__find_file            — find files matching pattern\n"
-        "  • mcp__filesystem__search_files     — filesystem glob search\n"
-        "  • mcp__filesystem__directory_tree   — browse directory structure"
+        "BLOCKED — mcp_server > built-in\n"
+        "  find files             → mcp__serena__find_file\n"
+        "  browse structure       → mcp__filesystem__directory_tree\n"
+        "  search files           → mcp__filesystem__search_files"
     ),
 }
 
 WARN = {
     "Edit": (
-        "PREFER serena for symbol-level edits:\n"
-        "  • Change function/class body  → mcp__serena__replace_symbol_body\n"
-        "  • Rename symbol (cascade)     → mcp__serena__rename_symbol\n"
-        "  • Insert after symbol         → mcp__serena__insert_after_symbol\n"
-        "  • Insert before symbol        → mcp__serena__insert_before_symbol\n"
-        "  • Regex/string replace        → mcp__serena__replace_content\n"
-        "  Edit allowed ONLY for plain line-based changes with no symbol equivalent."
+        "PREFER serena (mcp_server > built-in):\n"
+        "  edit function/class body  → mcp__serena__replace_symbol_body\n"
+        "  rename + cascade refs     → mcp__serena__rename_symbol\n"
+        "  insert after symbol       → mcp__serena__insert_after_symbol\n"
+        "  insert before symbol      → mcp__serena__insert_before_symbol\n"
+        "  regex/string replace      → mcp__serena__replace_content\n"
+        "Edit allowed ONLY for plain line-based changes with no symbol equivalent."
     ),
     "Write": (
-        "PREFER MCP tools for file creation:\n"
-        "  • New code file               → mcp__serena__create_text_file\n"
-        "  • Non-code / doc file         → mcp__filesystem__write_file\n"
-        "  Write allowed only when no MCP equivalent applies."
+        "PREFER mcp tools (mcp_server > built-in):\n"
+        "  new code file             → mcp__serena__create_text_file\n"
+        "  non-code/doc file         → mcp__filesystem__write_file\n"
+        "Write allowed only when no mcp equivalent applies."
     ),
     "WebSearch": (
-        "PREFER MCP web tools:\n"
-        "  • Known URL (full page)        → mcp__web_reader__webReader\n"
-        "  • Known URL (specific content) → mcp__fetch__fetch\n"
-        "  • Library/framework docs       → mcp__context7__resolve-library-id then mcp__context7__get-library-docs\n"
-        "  WebSearch allowed only when no URL or library is known."
+        "PREFER mcp web tools (mcp_server > built-in):\n"
+        "  full page                 → mcp__web_reader__webReader\n"
+        "  specific URL content      → mcp__fetch__fetch\n"
+        "  library/framework docs    → mcp__context7__resolve-library-id → mcp__context7__get-library-docs\n"
+        "WebSearch only when no URL or library is known."
     ),
     "Read": (
-        "PREFER MCP tools for reading:\n"
-        "  • Understand file structure    → mcp__serena__get_symbols_overview\n"
-        "  • Read code file/chunk         → mcp__serena__read_file\n"
-        "  • Read text file               → mcp__filesystem__read_text_file\n"
-        "  • Read PDF/DOCX/HTML/CSV       → mcp__doc-forge__document_reader\n"
-        "  • Read Excel                   → mcp__doc-forge__excel_read\n"
-        "  • Read image (remote URL)      → mcp__4_5v_mcp__analyze_image\n"
-        "  • Read multiple files          → mcp__filesystem__read_multiple_files\n"
-        "  Read allowed only when none of the above apply."
+        "PREFER mcp tools (mcp_server > built-in):\n"
+        "  understand structure      → mcp__serena__get_symbols_overview\n"
+        "  read code file/chunk      → mcp__serena__read_file\n"
+        "  read text file            → mcp__filesystem__read_text_file\n"
+        "  read PDF/DOCX/HTML/CSV    → mcp__doc-forge__document_reader\n"
+        "  read Excel                → mcp__doc-forge__excel_read\n"
+        "  read multiple files       → mcp__filesystem__read_multiple_files\n"
+        "  read image (remote URL)   → mcp__4_5v_mcp__analyze_image\n"
+        "Read allowed only when none of the above apply."
     ),
 }
 
@@ -87,7 +85,7 @@ if tool_name in WARN:
     output = {
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",
-            "additionalContext": f"⚠️ Tool preference reminder:\n{WARN[tool_name]}"
+            "additionalContext": f"⚠️ TOOL PRIORITY: mcp_server > built-in\n{WARN[tool_name]}"
         }
     }
     print(json.dumps(output))
